@@ -3,6 +3,7 @@ from datasetup import data_download
 from datasetup import check_data_quality
 from datasetup import split_balance
 import torch
+from model import Classgitmodel
 
 data_path = data_download(
     url="https://archive.ics.uci.edu/static/public/350/data.csv",
@@ -47,5 +48,14 @@ y_train_tensor = torch.tensor(
 y_test_tensor = torch.tensor(
     y_test.to_numpy(),
     dtype=torch.float32
+
 )
 
+# call the model 
+input_feature =X_train_tensor.shape[1]
+hidden_feature =32
+output_feature =1
+model = Classgitmodel(input_features=input_feature,
+                      hidden_features=hidden_feature,
+                      output_feature=output_feature)
+print(f"model :{model.state_dict()}")
