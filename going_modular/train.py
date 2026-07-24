@@ -2,7 +2,7 @@ import pandas as pd
 from datasetup import data_download
 from datasetup import check_data_quality
 from datasetup import split_balance
-
+import torch
 
 data_path = data_download(
     url="https://archive.ics.uci.edu/static/public/350/data.csv",
@@ -22,9 +22,30 @@ print(cleaned_dataframe.head())
 
 # 3. Split the data and balance only the training set
 X_train, X_test, y_train, y_test = split_balance(
-    cleaned_dataframe=cleaned_dataframe,target ="Y"
-)
+    cleaned_dataframe=cleaned_dataframe,target ="Y")
 print(f"the shape of X_train :{X_train.shape}")
 print(f"the shape of y_train: {y_train.shape}")
 print(f"the shape of X-test:{X_test.shape}")
 print(f"the shape of X-test:{y_test.shape}")
+
+#convert to tensor
+X_train_tensor = torch.tensor(
+    X_train.to_numpy(),
+    dtype=torch.float32
+)
+
+X_test_tensor = torch.tensor(
+    X_test.to_numpy(),
+    dtype=torch.float32
+)
+
+y_train_tensor = torch.tensor(
+    y_train.to_numpy(),
+    dtype=torch.float32
+)
+
+y_test_tensor = torch.tensor(
+    y_test.to_numpy(),
+    dtype=torch.float32
+)
+
