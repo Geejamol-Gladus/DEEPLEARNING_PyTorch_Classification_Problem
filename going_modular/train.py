@@ -47,22 +47,24 @@ model = Classgitmodel(input_features=input_feature,
                       output_feature=output_feature)
 print(f"model :{model.state_dict()}")
 loss_fn = nn.BCEWithLogitsLoss()
-
+LEARNING_RATE =0.01
 optimizer = torch.optim.Adam(
     model.parameters(),
-    lr=0.001
+    lr=LEARNING_RATE
 )
-mlflow.set_experiement("Binary Classification ")
-epo =100
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+
+mlflow.set_experiment("Binary Classification ")
+EPO=100
 mlflow.enable_system_metrics_logging()
 with mlflow.start_run():
     # lof the parameters
     mlflow.log_params({
-        "EPOCHS":epo,
+        "EPOCHS":EPO,
         "OPTIMIZER ":optimizer.__class__.__name__,
         "LOSS_FUNCTION ":loss_fn.__class__.__name__,
         "MODEL_NAME":model.__class__.__name__,
-        "LEARNING RATE":0.001,
+        "LEARNING RATE":LEARNING_RATE,
         "INPUT_FEATURE ":input_feature,
         "HIDDEN_FEATURE":hidden_feature,
         "OUTPUT_FEATURE":output_feature,
@@ -72,8 +74,10 @@ with mlflow.start_run():
                   train_dataloader=train_dataloader,
                   test_dataloader=test_dataloader,
                   loss_fn=loss_fn,
-                  optimizer =optimizer,epoch=epo)
+                  optimizer =optimizer,epoch=EPO)
     mlflow.pytorch.log_model(
         pytorch_model=model,
-        name="BINARY CLASSIFIFER"
+        name="BINARY CLASSIFIER",  
+        input_example=X_batch[:1].numpy(), 
+        serialization_format="pickle", 
     )
