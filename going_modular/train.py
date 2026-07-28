@@ -8,7 +8,8 @@ from model import Classgitmodel
 from dataloader import dataloader
 from engine import train
 import mlflow 
-
+from mlflow.models  import infer_signature
+device ="cuda" if torch.cuda.is_available() else "cpu"
 data_path = data_download(
     url="https://archive.ics.uci.edu/static/public/350/data.csv",
     data_dir="data/",
@@ -70,14 +71,32 @@ with mlflow.start_run():
         "OUTPUT_FEATURE":output_feature,
 
     })
-    result =train(model=model,
+  
+
+
+    result =train(model=model.to(device),
                   train_dataloader=train_dataloader,
                   test_dataloader=test_dataloader,
                   loss_fn=loss_fn,
                   optimizer =optimizer,epoch=EPO)
+
+
+     # adding signature after training and inside model.eval()
+    model.eval()
+    input_tensor =X_batch[:4].float().to(device)
+    with torch.inference_mode():              
+            pred_tensor =model(input_tensor)
+    # mlflow signature uses CPU nympy array
+    input_sig =input_tensor.detach().cpu().numpy()
+    pred =pred_tensor.detach().cpu().numpy()
+    signature = infer_signature(input_sig,pred )
+
+
+
     mlflow.pytorch.log_model(
         pytorch_model=model,
-        name="BINARY CLASSIFIER",  
-        input_example=X_batch[:1].numpy(), 
+        name="BINARY_CLASSIFIER",  
+        input_example=input_sig[:1] ,
+        signature =signature ,
         serialization_format="pickle", 
     )
