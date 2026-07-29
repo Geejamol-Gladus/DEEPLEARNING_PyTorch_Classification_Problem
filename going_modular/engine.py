@@ -125,8 +125,8 @@ def train(model,train_dataloader,test_dataloader,loss_fn,optimizer,epoch):
         print(f"the test loss is{test_loss}")
     return {
         "history" :result,
-        "Best_validation_accuracy":best_test_accuracy,
-        "Best_validation_loss": best_test_loss,
-        "Best_model":best_model_state,
-        "Best_epoch":best_epoch
+        "best_test_accuracy":best_test_accuracy,
+        "best_test_loss": best_test_loss,
+        "best_model":best_model_state,
+        "best_epoch":best_epoch
     }
