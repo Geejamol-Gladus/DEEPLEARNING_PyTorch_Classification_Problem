@@ -127,6 +127,6 @@ def train(model,train_dataloader,test_dataloader,loss_fn,optimizer,epoch):
         "history" :result,
         "best_test_accuracy":best_test_accuracy,
         "best_test_loss": best_test_loss,
-        "best_model":best_model_state,
+        "best_model_state":best_model_state,
         "best_epoch":best_epoch
     }

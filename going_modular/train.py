@@ -62,8 +62,8 @@ search_space =({
       "learning_rate":[0.01,0.1],
       "hidden_features":[16,32]
 })
-hyper_combo =itertools.product(search_space["hidden_features"],
-                               search_space["learning_rate"])
+hyper_combo =itertools.product(search_space["learning_rate"],search_space["hidden_features"]
+                               )
 
 #----------------------------------------------------------------------------
 #                   DEFINE THE VARIABLES FOR THE BEST MODEL 
@@ -81,7 +81,7 @@ best_run_id=None
 #log teh param 
 #----------------------------------------------------------------------------
 with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_metrics=True) as parent_run:
-      num_of_trials =(len(search_space["hidden_features"])*len(search_space["learning_rate"]))
+      num_of_trials =(len(search_space["learning_rate"])*len(search_space["hidden_features"]))
       mlflow.set_tags({
         "run_type":"hyper_parameter tuning",
         "search_method":"grid search",
@@ -112,7 +112,7 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
                   output_feature =1
                   model = Classgitmodel(input_features=input_feature,
                       hidden_features=hidden_feature,
-                      output_feature=output_feature)
+                      output_feature=output_feature).to(device)
                   #print(f"model :{model.state_dict()}")
                   loss_fn = nn.BCEWithLogitsLoss()
                   optimizer = torch.optim.Adam(    model.parameters(),    lr=learning_rate)
@@ -121,16 +121,17 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
                   #---------------------------------------------------------------------------
                   EPO =100
                   mlflow.log_params({
+                        "TRAIL_NUMBER":trial_no,
                         "EPOCHS":EPO,
                         "OPTIMIZER ":optimizer.__class__.__name__,
                         "LOSS_FUNCTION ":loss_fn.__class__.__name__,
                         "MODEL_NAME":model.__class__.__name__,
-                        "LEARNING RATE":learning_rate,""
+                        "LEARNING RATE":learning_rate,
                         "INPUT_FEATURE ":input_feature,
                         "HIDDEN_FEATURE":hidden_feature,
                         "OUTPUT_FEATURE":output_feature,
                         })
-                  results = train(
+                  trial_results = train(
                                 model=model,
                                 train_dataloader=train_dataloader,
                                 test_dataloader=test_dataloader,
@@ -141,50 +142,121 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
                                 log_to_mlflow=True
                                 )
                   ## log in the final values but the last one 
-                  final_train_loss =results["train_loss"][-1]
+                  trial_best_accuracy =trial_results["best_test_accuracy"]
+                  trial_best_loss =trial_results["best_test_loss"]
+                  trial_best_epoch=trial_results["best_epoch"]
+                  #-----------------------------------------------------------
+                  # LOG THE RECIVED METRICS
+                  #------------------------------------------------------------
 
-                  final_train_acc =results["train_acc"][-1]
 
-                  final_test_acc =results["test_acc"][-1]
-
-                  final_test_loss =results["test_loss"][-1]
                   mlflow.log_params({"learning_rate": learning_rate,
                                      "hidden_features": hidden_feature
                                      })
-                  mlflow.log_metric("final_test_accuracy",final_test_acc)
-                  if final_test_acc > best_accuracy:
-                       best_accuracy = final_test_acc
+                  mlflow.log_metrics({
+                          "best_test_accuracy":trial_best_accuracy ,
+                          "best_test_loss": trial_best_loss,
+                          "best_epoch":trial_best_epoch
+                          })
+
+                  
+                  if trial_best_accuracy > best_accuracy:
+                       best_accuracy = trial_best_accuracy
                        best_run_id = child_run.info.run_id
-                       best_params = {
+                       best_model_state=trial_results["best_model_state"]
+                       best_parameters = {
                              "learning_rate": learning_rate,
                              "hidden_features": hidden_feature
                                }
+                       best_epoch =trial_results["best_epoch"]
+    
+    # ----------------------------------------------------------------
+    # LOG OVERALL BEST GRID-SEARCH RESULT TO THE PARENT RUN
+    # ----------------------------------------------------------------
 
-mlflow.log_metric("best_validation_accuracy", best_accuracy)
-mlflow.log_params({
-        "best_learning_rate": best_params["learning_rate"],
-        "best_hidden_features": best_params["hidden_features"],
-        "best_child_run_id": best_run_id
-    })
-     # adding signature after training and inside model.eval()
-model.eval()
-input_tensor =X_batch[:4].float().to(device)
-with torch.inference_mode():              
-            pred_tensor =model(input_tensor)
-    # mlflow signature uses CPU nympy array
-input_sig =input_tensor.detach().cpu().numpy()
-pred =pred_tensor.detach().cpu().numpy()
-signature = infer_signature(input_sig,pred )
-
-
-
-mlflow.pytorch.log_model(
-        pytorch_model=model,
-        name="BINARY_CLASSIFIER",  
-        input_example=input_sig[:1] ,
-        signature =signature ,
-        serialization_format="pickle", 
+mlflow.log_metric(
+        "best_validation_accuracy",
+        best_accuracy
     )
+
+mlflow.log_metric(
+        "best_epoch",
+        best_epoch
+    )
+
+mlflow.log_params({
+        "best_learning_rate":
+            best_parameters["learning_rate"],
+
+        "best_hidden_features":
+            best_parameters["hidden_features"],
+
+        "best_child_run_id":
+            best_run_id
+    })
+
+    # ----------------------------------------------------------------
+    # REBUILD THE BEST MODEL
+    # ----------------------------------------------------------------
+
+best_model = Classgitmodel(
+        input_features=best_parameters["input_features"],
+        hidden_features=best_parameters["hidden_features"],
+        output_feature=best_parameters["output_features"]
+    ).to(device)
+
+best_model.load_state_dict(
+        best_model_state
+    )
+
+best_model.eval()
+
+    # ----------------------------------------------------------------
+    # CREATE SIGNATURE USING THE ACTUAL BEST MODEL
+    # ----------------------------------------------------------------
+
+input_tensor = X_batch[:4].float().to(device)
+with torch.inference_mode():
+        prediction_tensor = best_model(
+            input_tensor
+        )
+
+input_signature_array = (
+        input_tensor
+        .detach()
+        .cpu()
+        .numpy()
+    )
+
+output_signature_array = (
+        prediction_tensor
+        .detach()
+        .cpu()
+        .numpy()
+    )
+
+signature = infer_signature(
+        model_input=input_signature_array,
+        model_output=output_signature_array
+    )
+
+    # ----------------------------------------------------------------
+    # LOG THE ACTUAL BEST MODEL
+    # ----------------------------------------------------------------
+
+model_info = mlflow.pytorch.log_model(
+        pytorch_model=best_model,
+        name="binary_classifier",
+        input_example=input_signature_array[:1],
+        signature=signature,
+        serialization_format="pickle"
+    )
+
+print("Best accuracy:", best_accuracy)
+print("Best epoch:", best_epoch)
+print("Best parameters:", best_parameters)
+print("Best child run ID:", best_run_id)
+
 
 
 
