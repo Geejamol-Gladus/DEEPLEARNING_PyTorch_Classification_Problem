@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import mlflow 
+import copy 
 
 def train_setup(model,train_dataloader,loss_fn,optimizer):
     model.train()
@@ -70,33 +71,62 @@ def test_setup(model,test_dataloader,loss_fn):
     aver_test_acc =test_correct/total_sample
     return aver_test_loss,aver_test_acc
 
-def train(model,train_dataloader,test_dataloader,loss_fn,optimizer):
-    epochs =100
+def train(model,train_dataloader,test_dataloader,loss_fn,optimizer,epoch):
+    epochs =epoch
+    #-----------------------------------------
+    #TO FIND OUT THE BEST EPOCH AND BEST WEIGHT 
+    #-----------------------------------------
+
+    best_epoch =0
+    best_test_accuracy =float("-inf")
+    best_test_loss =float("-inf")
+    best_state_mold =None
+
+    #---------------------------------------------
     #store metrics
-    result = [
-        "train_loss" =[],
-        "test_loss "=[],
-        "train_acc"=[],
-        "test_acc"=[]   ]
+    result = {
+        "train_loss" :[],
+        "test_loss":[],
+        "train_acc":[],
+        "test_acc":[]   }
     for epoch in range(epochs):
         train_loss,train_acc =train_setup(model=model,train_dataloader=train_dataloader,loss_fn =loss_fn,optimizer=optimizer)
 
         test_loss,test_acc =test_setup(model =model,test_dataloader=test_dataloader,loss_fn=loss_fn)
 
         result["train_loss"].append(train_loss)
-        result["test_loss"].append(test_loss)
         result["train_acc"].append(train_acc)
+        result["test_loss"].append(test_loss)
         result["test_acc"].append(test_acc)
+        #-----------------------------------------------------------
+        # TEH BEST EPOCH
+        #-----------------------------------------------------------
+        if test_acc>best_test_accuracy:
+            best_test_accuracy=test_acc
+            best_test_loss=test_loss
+            best_epoch=epoch+1
+            best_model_state =copy.deepcopy(model.state_dict())
+
+
         # log all epoch metric to mlflow 
-        mlflow.log_metrics ({
+        """mlflow.log_metrics ({
             "train_loss":train_loss,
             "test_loss":test_loss,
             "train_accuracy":train_acc,
             "test_accuracy ":test_acc},step =epoch
-        )
+        )"""
+
+
+
         print(f"the number of epochs are:{epoch}")
         print(f"the train accuracry is :{train_acc}")
         print(f"the test accuracy is :{test_acc}")
         print(f"the train loss is {train_loss}")
         print(f"the test loss is{test_loss}")
-    return result
+    return {
+        "history" :result,
+        "Best_validation_accuracy":best_test_accuracy,
+        "Best_validation_loss": best_test_loss,
+        "Best_model":best_model_state,
+        "Best_epoch":best_epoch
+    }
