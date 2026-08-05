@@ -11,6 +11,9 @@ import mlflow
 from mlflow.models  import infer_signature
 import itertools
 from mlflow import MlflowClient
+import joblib
+from pathlib import Path 
+import json
 
 
 data_path = data_download(
@@ -30,14 +33,23 @@ print(cleaned_dataframe.head())
 
 
 # 3. Split the data and balance only the training set
-X_train, X_test, y_train, y_test = split_balance(
+X_train, X_test, y_train, y_tes,scaler,feature_columns = split_balance(
     cleaned_dataframe=cleaned_dataframe,target ="Y")
 print(f"the shape of X_train :{X_train.shape}")
 print(f"the shape of y_train: {y_train.shape}")
 print(f"the shape of X-test:{X_test.shape}")
 print(f"the shape of X-test:{y_test.shape}")
 
+#--------------------Saving The Scaler and Featured Columns-----------------------------
+artifacts_dir =Path("artifacts")
+artifacts_dir.mkdir(parents=True,exist_ok=True)
+Scaler_path =artifacts_dir/"scaler.joblib"
+features_path =artifacts_dir/"feature_columns.json"
 
+joblib.dump(scaler,
+            scaler_path)
+ with open(features_path,"w") as file:
+      json.dump(feature_columns,file,indent =2)
 #----------------------------------------------------------------------------
 #                    CONFIGURATION 
 #----------------------------------------------------------------------------
@@ -91,6 +103,12 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
         "framework":"PyTorch",
         "problem_type":"binary_classification"
       })
+      mlflow.log_artifact(    str(scaler_path),
+                              artifact_path="preprocessing")
+
+      mlflow.log_artifact(    str(features_path),
+                            artifact_path="preprocessing"
+                            )
       mlflow.log_param("NUMBER_OF_TRIALS",num_of_trials)   
       #-----------------------------------------------------------    -----------------
       #                   loop through every combinations 
