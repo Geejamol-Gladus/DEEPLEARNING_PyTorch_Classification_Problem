@@ -10,6 +10,7 @@ from engine import train
 import mlflow 
 from mlflow.models  import infer_signature
 import itertools
+from mlflow import MlflowClient
 
 
 data_path = data_download(
@@ -50,6 +51,7 @@ mlflow.set_tracking_uri(TRACKING_URI)
 mlflow.set_experiment(EXPERIMENT_NAME)
 
 mlflow.enable_system_metrics_logging()
+client =MlflowClient()
 #----------------------------------------------------------------------------
 #                    HYPERPARAMETER TUNING 
 # PSEUDOCODE
@@ -74,6 +76,7 @@ best_parameters =None
 best_model_state=None
 best_results=None
 best_run_id=None
+best_epoch=None
 #----------------------------------------------------------------------------
 #                DEFINING THE PARENT RUN MLFLOW
 #set the tags,
@@ -88,7 +91,7 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
         "framework":"PyTorch",
         "problem_type":"binary_classification"
       })
-      mlflow.log_param("NUMBER _OF_TRIALS",num_of_trials)   
+      mlflow.log_param("NUMBER_OF_TRIALS",num_of_trials)   
       #-----------------------------------------------------------    -----------------
       #                   loop through every combinations 
 
@@ -137,9 +140,9 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
                                 test_dataloader=test_dataloader,
                                 loss_fn=loss_fn,
                                 optimizer=optimizer,
-                                epochs=EPO,
-                                device=device,
-                                log_to_mlflow=True
+                                epoch=EPO,
+                                device=device
+                                
                                 )
                   ## log in the final values but the last one 
                   trial_best_accuracy =trial_results["best_test_accuracy"]
@@ -166,7 +169,9 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
                        best_model_state=trial_results["best_model_state"]
                        best_parameters = {
                              "learning_rate": learning_rate,
-                             "hidden_features": hidden_feature
+                             "hidden_features": hidden_feature,
+                             "input_features":input_feature,
+                             "output_features":output_feature
                                }
                        best_epoch =trial_results["best_epoch"]
     
@@ -174,17 +179,17 @@ with mlflow.start_run(run_name ="Binary_classification_GRID_SEARCH",log_system_m
     # LOG OVERALL BEST GRID-SEARCH RESULT TO THE PARENT RUN
     # ----------------------------------------------------------------
 
-mlflow.log_metric(
+      mlflow.log_metric(
         "best_validation_accuracy",
         best_accuracy
     )
 
-mlflow.log_metric(
+      mlflow.log_metric(
         "best_epoch",
         best_epoch
     )
 
-mlflow.log_params({
+      mlflow.log_params({
         "best_learning_rate":
             best_parameters["learning_rate"],
 
@@ -199,63 +204,68 @@ mlflow.log_params({
     # REBUILD THE BEST MODEL
     # ----------------------------------------------------------------
 
-best_model = Classgitmodel(
+      best_model = Classgitmodel(
         input_features=best_parameters["input_features"],
         hidden_features=best_parameters["hidden_features"],
         output_feature=best_parameters["output_features"]
     ).to(device)
 
-best_model.load_state_dict(
+      best_model.load_state_dict(
         best_model_state
     )
-
-best_model.eval()
+      best_model.eval()
 
     # ----------------------------------------------------------------
     # CREATE SIGNATURE USING THE ACTUAL BEST MODEL
     # ----------------------------------------------------------------
 
-input_tensor = X_batch[:4].float().to(device)
-with torch.inference_mode():
-        prediction_tensor = best_model(
-            input_tensor
-        )
+      input_tensor = X_batch[:4].float().to(device)
+      with torch.inference_mode():
+                prediction_tensor = best_model(
+                    input_tensor
+                )
 
-input_signature_array = (
-        input_tensor
-        .detach()
-        .cpu()
-        .numpy()
-    )
+      input_signature_array = (
+                input_tensor
+                .detach()
+                .cpu()
+                .numpy()
+            )
 
-output_signature_array = (
-        prediction_tensor
-        .detach()
-        .cpu()
-        .numpy()
-    )
+      output_signature_array = (
+                prediction_tensor
+                .detach()
+                .cpu()
+                .numpy()
+            )
 
-signature = infer_signature(
-        model_input=input_signature_array,
-        model_output=output_signature_array
-    )
+      signature = infer_signature(
+                model_input=input_signature_array,
+                model_output=output_signature_array
+            )
 
     # ----------------------------------------------------------------
     # LOG THE ACTUAL BEST MODEL
     # ----------------------------------------------------------------
 
-model_info = mlflow.pytorch.log_model(
+      model_info = mlflow.pytorch.log_model(
         pytorch_model=best_model,
         name="binary_classifier",
         input_example=input_signature_array[:1],
         signature=signature,
-        serialization_format="pickle"
+        serialization_format="pickle",
+        registered_model_name=REGISTERED_MODEL_NAME
     )
+      client.set_registered_model_alias(   name=REGISTERED_MODEL_NAME ,
+    alias="champion",
+    version=model_info.registered_model_version,
+)
 
-print("Best accuracy:", best_accuracy)
-print("Best epoch:", best_epoch)
-print("Best parameters:", best_parameters)
-print("Best child run ID:", best_run_id)
+      print("Best accuracy:", best_accuracy)
+      print("Best epoch:", best_epoch)
+      print("Best parameters:", best_parameters)
+      print("Best child run ID:", best_run_id)
+      print("BEST modelURI:",f"models/{REGISTERED_MODEL_NAME}@champion")
 
 
 
