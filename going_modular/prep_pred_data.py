@@ -1,4 +1,5 @@
-import jsonimport joblib
+import json 
+import joblib
 import pandas as pd
 import torch
 
@@ -38,9 +39,9 @@ def prepare_new_data(
 
     ]
 
-    if missing_columns:
+    if missing_column:
         raise ValueError(
-            f"New data is missing Columns:{missing_columns}"
+            f"New data is missing Columns:{missing_column}"
         )
     #remove unexpected columns and restore training order
     df =df[feature_columns]

@@ -71,7 +71,7 @@ def test_setup(model,test_dataloader,loss_fn):
     aver_test_acc =test_correct/total_sample
     return aver_test_loss,aver_test_acc
 
-def train(model,train_dataloader,test_dataloader,loss_fn,optimizer,epoch):
+def train(model,train_dataloader,test_dataloader,loss_fn,optimizer,epoch,device ):
     epochs =epoch
     #-----------------------------------------
     #TO FIND OUT THE BEST EPOCH AND BEST WEIGHT 

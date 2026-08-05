@@ -33,7 +33,7 @@ print(cleaned_dataframe.head())
 
 
 # 3. Split the data and balance only the training set
-X_train, X_test, y_train, y_tes,scaler,feature_columns = split_balance(
+X_train, X_test, y_train, y_test,scaler,feature_columns = split_balance(
     cleaned_dataframe=cleaned_dataframe,target ="Y")
 print(f"the shape of X_train :{X_train.shape}")
 print(f"the shape of y_train: {y_train.shape}")
@@ -43,18 +43,18 @@ print(f"the shape of X-test:{y_test.shape}")
 #--------------------Saving The Scaler and Featured Columns-----------------------------
 artifacts_dir =Path("artifacts")
 artifacts_dir.mkdir(parents=True,exist_ok=True)
-Scaler_path =artifacts_dir/"scaler.joblib"
+scaler_path =artifacts_dir/"scaler.joblib"
 features_path =artifacts_dir/"feature_columns.json"
 
 joblib.dump(scaler,
             scaler_path)
- with open(features_path,"w") as file:
+with open(features_path,"w") as file:
       json.dump(feature_columns,file,indent =2)
 #----------------------------------------------------------------------------
 #                    CONFIGURATION 
 #----------------------------------------------------------------------------
 TRACKING_URI ="http://127.0.0.1:5000"
-EXPERIMENT_NAME ="BINARY _CLASSIFICATION(FRAUD_DETECTION )"
+EXPERIMENT_NAME ="BINARY _CLASSIFICATION(FRAUD_DETECTION_part2)"
 REGISTERED_MODEL_NAME ="PYTORCH_MODEL1"
 device ="cuda" if torch.cuda.is_available() else "cpu"
 

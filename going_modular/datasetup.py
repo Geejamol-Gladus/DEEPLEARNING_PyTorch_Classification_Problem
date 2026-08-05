@@ -79,8 +79,8 @@ def split_balance(cleaned_dataframe:pd.DataFrame,target:str):
         random_state=42,
         stratify=y
     )
-   # Save names before StandardScaler returns NumPy arrays
-    feature_columns = X_train.columns
+      # Preserve exact feature names and order
+    feature_columns = X_train.columns.tolist()
 
     scaler = StandardScaler()
 
@@ -106,7 +106,7 @@ def split_balance(cleaned_dataframe:pd.DataFrame,target:str):
         method="oversampling"
     )
 
-    return X_train,X_test_scaled,y_train,y_test
+    return X_train,X_test_scaled,y_train,y_test,scaler,feature_columns
 
 
 

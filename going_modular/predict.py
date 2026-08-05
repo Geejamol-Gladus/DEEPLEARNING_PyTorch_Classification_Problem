@@ -65,8 +65,8 @@ print(new_data.head())
 input_tensor = prepare_new_data(
     new_data=new_data,
     scaler_path=SCALER_PATH,
-    feature_columns_path=FEATURE_COLUMNS_PATH,
-    irrelevant_columns=["ID"]
+    feature_column_path=FEATURE_COLUMNS_PATH,
+    irrelevant_column=["ID"]
 ).to(device)
 
 

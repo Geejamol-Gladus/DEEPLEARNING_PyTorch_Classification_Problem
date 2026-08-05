@@ -3,21 +3,22 @@ import torch
 import pandas as pd
 from torch.utils.data import DataLoader ,TensorDataset
 def dataloader(X_train:pd.DataFrame,
-               y_train:pd.DataFrame,
+               y_train:pd.Series,
                X_test:pd.DataFrame,
-               y_test:pd.DataFrame,batch_size:int =32):
+               y_test:pd.Series,
+               batch_size:int =32):
     
     # conver teh data frame to tensor 
 
-    X_train_tensor =torch.tensor(X_train.to_numpy(),dtype = torch.float32)
+    X_train_tensor =torch.as_tensor(X_train.to_numpy(),dtype = torch.float32)
 
     input_feature =X_train_tensor.shape[1]
 
-    X_test_tensor =torch.tensor(X_test.to_numpy(),dtype =torch.float32)
+    X_test_tensor =torch.as_tensor(X_test.to_numpy(),dtype =torch.float32)
 
-    y_train_tensor =torch.tensor(y_train.to_numpy(),dtype =torch.float32)
+    y_train_tensor =torch.as_tensor(y_train.to_numpy(),dtype =torch.float32)
 
-    y_test_tensor =torch.tensor(y_test.to_numpy(),dtype =torch.float32)
+    y_test_tensor =torch.as_tensor(y_test.to_numpy(),dtype =torch.float32)
     # pair each row  with its target
     train_dataset =TensorDataset(X_train_tensor,y_train_tensor)
     test_dataset =TensorDataset(X_test_tensor,y_test_tensor)
